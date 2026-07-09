@@ -33,7 +33,9 @@ type NotificationItemProps = {
   postedAt: string | number | null;
 };
 
-export type NotificationsPopoverProps = IconButtonProps & {};
+export type NotificationsPopoverProps = IconButtonProps & {
+  unreadCount?: number;
+};
 
 interface MessageRecord {
   id: number;
@@ -52,7 +54,7 @@ interface ApiResponse<T> {
   message?: string;
 }
 
-export function NotificationsPopover({ sx, ...other }: NotificationsPopoverProps) {
+export function NotificationsPopover({ unreadCount = 0, sx, ...other }: NotificationsPopoverProps) {
   const [notifications, setNotifications] = useState<NotificationItemProps[]>([]);
   const [allNotifications, setAllNotifications] = useState<NotificationItemProps[]>([]);
   const [loading, setLoading] = useState(true);
@@ -140,9 +142,7 @@ export function NotificationsPopover({ sx, ...other }: NotificationsPopoverProps
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  }, [unreadCount]); // Re-fetch when the global unread count changes
 
   const markAllAsRead = async () => {
     try {
@@ -217,7 +217,7 @@ export function NotificationsPopover({ sx, ...other }: NotificationsPopoverProps
   return (
     <>
       <IconButton color={openPopover ? 'primary' : 'default'} onClick={handleOpenPopover} sx={sx} {...other}>
-        <Badge badgeContent={totalUnRead} color="error">
+        <Badge badgeContent={unreadCount > 0 ? unreadCount : totalUnRead} color="error">
           <Iconify width={24} icon={'solar:bell-bing-bold' as any} />
         </Badge>
       </IconButton>

@@ -1,4 +1,5 @@
 import { merge } from 'es-toolkit';
+import { useEffect } from 'react';
 
 // External
 import { useBoolean } from 'minimal-shared/hooks';
@@ -36,6 +37,9 @@ import { AccountPopover } from '../components/account-popover';
 import { MenuButton } from '../components/menu-button';
 import { NotificationsPopover } from '../components/notifications-popover';
 import { Searchbar } from '../components/searchbar';
+import { useWebToNative } from 'src/utils/useWebToNative';
+import { useNotificationPolling } from 'src/utils/useNotificationPolling';
+import { NotificationToast } from 'src/components/notification-toast/NotificationToast';
 
 // ----------------------------------------------------------------------
 
@@ -60,6 +64,31 @@ export function DashboardLayout({
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
 
   const navData = useNavData();
+  
+  // Handle WebToNative Push Registration
+  const { isWebToNative, registerForPush, setUserForPush } = useWebToNative();
+  
+  // Handle in-app toast notifications
+  const { counts, newNotifications, clearNewNotifications } = useNotificationPolling();
+
+  useEffect(() => {
+    if (isWebToNative) {
+      registerForPush();
+      
+      // Try to set user ID if user data is in localStorage
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          if (user.user_id) {
+            setUserForPush(user.user_id);
+          }
+        } catch (e) {
+          console.error("Error parsing user from localStorage", e);
+        }
+      }
+    }
+  }, [isWebToNative]);
 
   const renderHeader = () => {
     const headerSlotProps: HeaderSectionProps['slotProps'] = {
@@ -84,7 +113,7 @@ export function DashboardLayout({
       rightArea: (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 0.75 } }}>
           <Searchbar />
-          <NotificationsPopover />
+          <NotificationsPopover unreadCount={counts.unread_messages} />
           <AccountPopover data={_account} />
         </Box>
       ),
@@ -133,6 +162,7 @@ export function DashboardLayout({
         ...(Array.isArray(sx) ? sx : [sx]),
       ]}
     >
+      <NotificationToast events={newNotifications} onClose={clearNewNotifications} />
       <MainSection {...slotProps?.main}>{children}</MainSection>
     </LayoutSection>
   );
